@@ -240,6 +240,36 @@ function downloadTableAsPDF() {
   
   html2pdf().set(opt).from(element).save();
 }
+
+const emojis = ["🚀", "⭐", "🔥", "💰", "🔑", "☢️", "♥️", "💥"];
+let index = 0;
+
+const setFaviconEmoji = emoji => {
+  const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
+  const ctx = canvas.getContext("2d");
+  Object.assign(ctx, {
+    font: "50px serif",
+    textAlign: "center",
+    textBaseline: "middle"
+  });
+  ctx.fillText(emoji, 32, 32);
+
+  let link = document.getElementById("favicon") || Object.assign(document.createElement("link"), {
+    id: "favicon", rel: "icon", type: "image/png"
+  });
+  link.href = canvas.toDataURL("image/png");
+  if (!document.head.contains(link)) document.head.appendChild(link);
+};
+
+const rotateEmojiFavicon = () => {
+  setFaviconEmoji(emojis[index]);
+  index = (index + 1) % emojis.length;
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  rotateEmojiFavicon();
+  setInterval(rotateEmojiFavicon, 2000);
+});
   </script>
 
 </body>
