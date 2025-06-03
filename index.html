@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -24,36 +24,25 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
       border: 1px solid #ccc;
     }
     thead {
       background-color: #a3c4dc;
-      color: #222;
       position: sticky;
       top: 0;
       z-index: 2;
     }
     th, td {
       padding: 10px;
-      text-align: center;
       border: 1px solid #ccc;
+      text-align: center;
       white-space: nowrap;
     }
-    th.serial, td.serial {
-      width: 21%;
-    }
     th.name, td.name {
-      width: 90%;
       text-align: left;
-      padding-left: 15px;
       white-space: normal;
     }
-    th.tk, td.tk {
-      width: 30%;
-    }
-    th.timestamp, td.timestamp,
-    th.father, td.father {
+    .hidden-print {
       display: none;
     }
     tbody tr:hover {
@@ -82,7 +71,6 @@
       z-index: 100;
       left: 0; top: 0;
       width: 100%; height: 100%;
-      overflow: auto;
       background-color: rgba(0,0,0,0.4);
       justify-content: center;
       align-items: center;
@@ -98,12 +86,6 @@
     .modal-content h2 {
       margin-bottom: 15px;
       color: #333;
-      font-size: 22px;
-    }
-    .modal-content p {
-      margin: 8px 0;
-      font-size: 16px;
-      color: #555;
     }
     .modal-close {
       float: right;
@@ -119,19 +101,18 @@
 </head>
 <body>
 
-  <div class="table-container">
+  <div class="table-container" id="print-area">
     <table>
       <thead>
         <tr>
-          <th class="serial">SI</th>
-          <th class="timestamp">Timestamp</th>
-          <th class="name">Name</th>
-          <th class="father">Father's Name</th>
-          <th class="tk">Tk</th>
+          <th>SI</th>
+          <th class="hidden-print">Timestamp</th>
+          <th class="name">নাম</th>
+          <th class="hidden-print">পিতার নাম</th>
+          <th>Tk</th>
         </tr>
       </thead>
-      <tbody id="data-body">
-      </tbody>
+      <tbody id="data-body"></tbody>
     </table>
   </div>
 
@@ -162,114 +143,133 @@
       .then(res => res.json())
       .then(data => {
         const tbody = document.getElementById("data-body");
+        let total = 0;
         data.forEach((row, index) => {
           const tr = document.createElement("tr");
-          
           const tdSerial = document.createElement("td");
           tdSerial.textContent = index + 1;
-          tdSerial.classList.add("serial");
           tr.appendChild(tdSerial);
-          
+
           const tdTimestamp = document.createElement("td");
           tdTimestamp.textContent = row["Timestamp"] || "";
-          tdTimestamp.classList.add("timestamp");
+          tdTimestamp.classList.add("hidden-print");
           tr.appendChild(tdTimestamp);
-          
+
           const tdName = document.createElement("td");
           tdName.textContent = row["Name"] || "";
           tdName.classList.add("name");
           tr.appendChild(tdName);
-          
+
           const tdFather = document.createElement("td");
           const fatherKey = Object.keys(row).find(key => key.toLowerCase().includes("father"));
           tdFather.textContent = fatherKey ? row[fatherKey] : "";
-          tdFather.classList.add("father");
+          tdFather.classList.add("hidden-print");
           tr.appendChild(tdFather);
-          
+
           const tdTk = document.createElement("td");
           tdTk.textContent = row["Tk"] || "";
-          tdTk.classList.add("tk");
           tr.appendChild(tdTk);
-          
+
+          total += parseFloat(row["Tk"]) || 0;
+
           tr.addEventListener("click", () => {
-            modalTimestamp.textContent = `Timestamp: ${row["Timestamp"] || "N/A"}`;
-            modalName.textContent = `Name: ${row["Name"] || "N/A"}`;
-            modalFather.textContent = `Father's Name: ${fatherKey ? row[fatherKey] : "N/A"}`;
-            modalTk.textContent = `Tk: ${row["Tk"] || "N/A"}`;
+            modalTimestamp.textContent = `সময়ঃ ${row["Timestamp"] || "N/A"}`;
+            modalName.textContent = `নামঃ ${row["Name"] || "N/A"}`;
+            modalFather.textContent = `পিতার নামঃ ${fatherKey ? row[fatherKey] : "N/A"}`;
+            modalTk.textContent = `টাকা: ${row["Tk"] || "N/A"}`;
             modal.style.display = "flex";
           });
-          
+
           tbody.appendChild(tr);
         });
-        const totalRow = document.createElement("tr");
-        const totalCell = document.createElement("td");
-        totalCell.colSpan = 2;
-        totalCell.textContent = "Total amount";
-        totalCell.style.textAlign = "center";
-        totalCell.style.fontWeight = "bold";
-        totalRow.appendChild(totalCell);
-        const totalTkCell = document.createElement("td");
-        totalTkCell.textContent = (data.length * 500) + " ৳";
-        totalTkCell.style.fontWeight = "bold";
-        totalTkCell.style.color = "green";
-        totalRow.appendChild(totalTkCell);
-        tbody.appendChild(totalRow);
-      })
-      .catch(err => {
-        console.error("Error loading data:", err);
+
+        const totalRowScreen = createTotalRow(total, true);
+        tbody.appendChild(totalRowScreen);
+
+        const totalRowPDF = createTotalRow(total, false);
+        totalRowPDF.classList.add("hidden-print");
+        totalRowPDF.setAttribute("id", "pdf-total-row");
+        tbody.appendChild(totalRowPDF);
       });
 
-    window.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        modal.style.display = "none";
+    function createTotalRow(total, isScreen) {
+      const tr = document.createElement("tr");
+      if (isScreen) {
+        tr.innerHTML = `<td colspan="2" style="font-weight:bold; text-align:center;">মোট</td>
+                        <td colspan="2" class="hidden-print"></td>
+                        <td style="font-weight:bold; color:green;">${total.toFixed(2)} ৳</td>`;
+      } else {
+        tr.innerHTML = `<td colspan="4" style="font-weight:bold; text-align:center;">মোট</td>
+                        <td style="font-weight:bold; color:green;">${total.toFixed(2)} ৳</td>`;
       }
+      return tr;
+    }
+
+    modalClose.onclick = () => modal.style.display = "none";
+    window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
+
+    function downloadTableAsPDF() {
+      const hidden = document.querySelectorAll('.hidden-print');
+      hidden.forEach(el => el.classList.remove('hidden-print'));
+
+      const totalRowScreen = document.querySelector("tbody tr:nth-last-child(2)");
+      if (totalRowScreen) totalRowScreen.style.display = "none";
+
+      const totalRowPDF = document.getElementById("pdf-total-row");
+      if (totalRowPDF) {
+        totalRowPDF.classList.remove('hidden-print');
+        totalRowPDF.style.display = "";
+      }
+
+      const opt = {
+        margin: 0.2,
+        filename: 'table-data.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(document.getElementById("print-area")).save().then(() => {
+        hidden.forEach(el => el.classList.add('hidden-print'));
+
+        if (totalRowScreen) totalRowScreen.style.display = "";
+        if (totalRowPDF) {
+          totalRowPDF.classList.add('hidden-print');
+          totalRowPDF.style.display = "none";
+        }
+      });
+    }
+
+    const emojis = ["🚀", "⭐", "🔥", "💰", "🔑", "☢️", "♥️", "💥"];
+    let index = 0;
+
+    const setFaviconEmoji = emoji => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64; canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      ctx.font = "50px serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(emoji, 32, 32);
+
+      let link = document.getElementById("favicon");
+      if (!link) {
+        link = document.createElement("link");
+        link.id = "favicon";
+        link.rel = "icon";
+        link.type = "image/png";
+        document.head.appendChild(link);
+      }
+      link.href = canvas.toDataURL("image/png");
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      setFaviconEmoji(emojis[index]);
+      setInterval(() => {
+        index = (index + 1) % emojis.length;
+        setFaviconEmoji(emojis[index]);
+      }, 2000);
     });
-
-    modalClose.addEventListener("click", () => {
-      modal.style.display = "none";
-    });
-function downloadTableAsPDF() {
-  const element = document.querySelector(".table-container");
-  const opt = {
-    margin: 0.2,
-    filename: 'table-data.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-  };
-  
-  html2pdf().set(opt).from(element).save();
-}
-
-const emojis = ["🚀", "⭐", "🔥", "💰", "🔑", "☢️", "♥️", "💥"];
-let index = 0;
-
-const setFaviconEmoji = emoji => {
-  const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 64 });
-  const ctx = canvas.getContext("2d");
-  Object.assign(ctx, {
-    font: "50px serif",
-    textAlign: "center",
-    textBaseline: "middle"
-  });
-  ctx.fillText(emoji, 32, 32);
-
-  let link = document.getElementById("favicon") || Object.assign(document.createElement("link"), {
-    id: "favicon", rel: "icon", type: "image/png"
-  });
-  link.href = canvas.toDataURL("image/png");
-  if (!document.head.contains(link)) document.head.appendChild(link);
-};
-
-const rotateEmojiFavicon = () => {
-  setFaviconEmoji(emojis[index]);
-  index = (index + 1) % emojis.length;
-};
-
-window.addEventListener("DOMContentLoaded", () => {
-  rotateEmojiFavicon();
-  setInterval(rotateEmojiFavicon, 2000);
-});
   </script>
 
 </body>
