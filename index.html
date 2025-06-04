@@ -7,7 +7,9 @@
   <title>DDBP</title>
   <style>
     * {
-      margin: 0; padding: 0; box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -61,16 +63,17 @@
       height: 60px;
       font-size: 20px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       z-index: 10;
     }
-
     .modal {
       display: none;
       position: fixed;
       z-index: 100;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
       background-color: rgba(0,0,0,0.4);
       justify-content: center;
       align-items: center;
@@ -89,13 +92,27 @@
     }
     .modal-close {
       float: right;
-      cursor: pointer;
       font-weight: bold;
       font-size: 22px;
       color: #888;
+      cursor: pointer;
     }
     .modal-close:hover {
       color: #000;
+    }
+    .info-btn {
+      position: fixed;
+      bottom: 90px;
+      right: 28px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      padding: 12px;
+      font-size: 14px;
+      cursor: #00000000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 10;
     }
   </style>
 </head>
@@ -117,15 +134,29 @@
   </div>
 
   <button class="home-btn" onclick="downloadTableAsPDF()">📂</button>
+  <button class="info-btn" onclick="showInfo()">🏷️</button>
 
   <div id="myModal" class="modal">
     <div class="modal-content">
       <span class="modal-close" id="modalClose">&times;</span>
-      <h2>Details</h2>
+      <h2>বিস্তারিত</h2>
       <p id="modalTimestamp"></p>
       <p id="modalName"></p>
       <p id="modalFather"></p>
       <p id="modalTk"></p>
+    </div>
+  </div>
+
+  <div id="infoModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="document.getElementById('infoModal').style.display='none'">&times;</span>
+      <h2>ওয়েবসাইট সম্পর্কে</h2>
+      <p>এই ওয়েবসাইটটি একটি ডেটা প্রদর্শনের টুল, যা Realtime simulation এর মাধ্যমে ডাটা প্রদর্শন করে। </p>
+      <ul style="margin-top:10px; padding-left:20px;">
+        <li>📄 অটোমেটিক ডাটা লোড।</li>
+        <li>📥 PDF আকারে ডাউনলোড সুবিধা।</li>
+        <li>🔍 বিস্তারিত তথ্য দেখার জন্য ক্লিকযোগ্য সারি।</li>
+      </ul>
     </div>
   </div>
 
@@ -144,8 +175,10 @@
       .then(data => {
         const tbody = document.getElementById("data-body");
         let total = 0;
+
         data.forEach((row, index) => {
           const tr = document.createElement("tr");
+
           const tdSerial = document.createElement("td");
           tdSerial.textContent = index + 1;
           tr.appendChild(tdSerial);
@@ -167,16 +200,17 @@
           tr.appendChild(tdFather);
 
           const tdTk = document.createElement("td");
-          tdTk.textContent = row["Tk"] || "";
+          const tkAmount = parseFloat(row["Tk"]) || 0;
+          tdTk.textContent = tkAmount.toFixed(2);
           tr.appendChild(tdTk);
 
-          total += parseFloat(row["Tk"]) || 0;
+          total += tkAmount;
 
           tr.addEventListener("click", () => {
-            modalTimestamp.textContent = `সময়ঃ ${row["Timestamp"] || "N/A"}`;
-            modalName.textContent = `নামঃ ${row["Name"] || "N/A"}`;
-            modalFather.textContent = `পিতার নামঃ ${fatherKey ? row[fatherKey] : "N/A"}`;
-            modalTk.textContent = `টাকা: ${row["Tk"] || "N/A"}`;
+            modalTimestamp.innerHTML = `সময়ঃ <span style="color:crimson; font-weight:bold;">${row["Timestamp"] || "N/A"}</span>`;
+            modalName.innerHTML = `নামঃ <span style="color:darkblue; font-weight:bold;">${row["Name"] || "N/A"}</span>`;
+            modalFather.innerHTML = `পিতার নামঃ <span style="color:darkgreen; font-weight:bold;">${fatherKey ? row[fatherKey] : "N/A"}</span>`;
+            modalTk.innerHTML = `টাকাঃ <span style="color:darkorange; font-weight:bold;">${tkAmount.toFixed(2)} ৳</span>`;
             modal.style.display = "flex";
           });
 
@@ -206,7 +240,9 @@
     }
 
     modalClose.onclick = () => modal.style.display = "none";
-    window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
+    window.onclick = e => {
+      if (e.target === modal) modal.style.display = "none";
+    };
 
     function downloadTableAsPDF() {
       const hidden = document.querySelectorAll('.hidden-print');
@@ -229,48 +265,26 @@
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 
-      html2pdf().set(opt).from(document.getElementById("print-area")).save().then(() => {
-        hidden.forEach(el => el.classList.add('hidden-print'));
+      html2pdf().set(opt).from(document.getElementById("print-area")).save();
 
+      setTimeout(() => {
+        hidden.forEach(el => el.classList.add('hidden-print'));
         if (totalRowScreen) totalRowScreen.style.display = "";
-        if (totalRowPDF) {
-          totalRowPDF.classList.add('hidden-print');
-          totalRowPDF.style.display = "none";
-        }
-      });
+        if (totalRowPDF) totalRowPDF.classList.add('hidden-print');
+      }, 1000);
     }
 
-    const emojis = ["🚀", "⭐", "🔥", "💰", "🔑", "☢️", "♥️", "💥"];
-    let index = 0;
-
-    const setFaviconEmoji = emoji => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 64; canvas.height = 64;
-      const ctx = canvas.getContext("2d");
-      ctx.font = "50px serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(emoji, 32, 32);
-
-      let link = document.getElementById("favicon");
-      if (!link) {
-        link = document.createElement("link");
-        link.id = "favicon";
-        link.rel = "icon";
-        link.type = "image/png";
-        document.head.appendChild(link);
+    function showInfo() {
+      document.getElementById('infoModal').style.display = 'flex';
+    }
+    window.onclick = function(e) {
+      if (e.target === modal) {
+        modal.style.display = "none";
       }
-      link.href = canvas.toDataURL("image/png");
+      if (e.target === document.getElementById("infoModal")) {
+        document.getElementById("infoModal").style.display = "none";
+      }
     };
-
-    window.addEventListener("DOMContentLoaded", () => {
-      setFaviconEmoji(emojis[index]);
-      setInterval(() => {
-        index = (index + 1) % emojis.length;
-        setFaviconEmoji(emojis[index]);
-      }, 2000);
-    });
   </script>
-
 </body>
 </html>
